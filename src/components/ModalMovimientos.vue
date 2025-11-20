@@ -98,19 +98,19 @@
                           <span class="text-gray-600">De:</span>
                           <span class="font-medium text-gray-800 ml-2">{{
                             mov.desde
-                          }}</span>
+                            }}</span>
                         </p>
                         <p>
                           <span class="text-gray-600">Hacia:</span>
                           <span class="font-medium text-gray-800 ml-2">{{
                             mov.hacia
-                          }}</span>
+                            }}</span>
                         </p>
                         <p>
                           <span class="text-gray-600">Responsable:</span>
                           <span class="font-medium text-gray-800 ml-2">{{
                             mov.responsable
-                          }}</span>
+                            }}</span>
                         </p>
                         <p v-if="mov.observacion" class="pt-2 text-gray-600">
                           <i class="pi pi-info-circle mr-1"></i>
