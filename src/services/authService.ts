@@ -9,3 +9,11 @@ export async function meService() {
   const res = await http.get("/auth/me/");
   return res.data;
 }
+
+export async function changePasswordService(currentPassword: string, newPassword: string) {
+  const res = await http.post("/auth/change-password/", { 
+    current_password: currentPassword, 
+    new_password: newPassword 
+  });
+  return res.data;
+}

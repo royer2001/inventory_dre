@@ -123,8 +123,8 @@
           <span class="font-medium">Usuarios</span>
         </router-link>
 
-        <!-- Ajustes - Solo Administrador -->
-        <router-link v-if="isAdmin" to="/protected/ajustes"
+        <!-- Ajustes - Administrador e Inventariador -->
+        <router-link v-if="canAccessSettings" to="/protected/ajustes"
           class="group flex items-center gap-3 px-4 py-3 rounded-lg transition-all duration-200" :class="isAjustesActive
             ? 'bg-gradient-to-r from-blue-600 to-indigo-600 shadow-lg shadow-blue-500/30'
             : 'hover:bg-slate-700/50'
@@ -301,6 +301,7 @@ const roleBadgeClass = computed(() => {
 
 // Roles
 const isAdmin = computed(() => auth.user?.rol_id === 1);
+const canAccessSettings = computed(() => [1, 2].includes(auth.user?.rol_id || 0));
 
 // Rutas activas
 const isInventarioActive = computed(() => route.path === "/protected");

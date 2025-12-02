@@ -27,7 +27,7 @@
           <i class="pi pi-shield mr-2"></i>
           Seguridad
         </button>
-        <button @click="activeTab = 'sistema'" :class="[
+        <button v-if="auth.user?.rol_id === 1" @click="activeTab = 'sistema'" :class="[
           activeTab === 'sistema'
             ? 'border-purple-600 text-purple-600'
             : 'border-transparent text-gray-500 hover:text-gray-700 hover:border-gray-300',
@@ -83,27 +83,31 @@
       <div v-if="activeTab === 'seguridad'" class="space-y-6 animate-fade-in">
         <div class="bg-white p-6 rounded-xl shadow-sm border border-gray-100">
           <h3 class="text-lg font-medium text-gray-900 mb-4">Contraseña</h3>
-          <form class="space-y-4 max-w-md">
+          <Form :validation-schema="schema" @submit="onSubmit" class="space-y-4 max-w-md" v-slot="{ errors }">
             <div>
               <label class="block text-sm font-medium text-gray-700 mb-1">Contraseña Actual</label>
-              <input type="password"
-                class="w-full px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-purple-500 focus:border-transparent">
+              <Field name="current" type="password"
+                :class="['w-full px-3 py-2 border rounded-lg focus:ring-2 focus:border-transparent transition-colors', errors.current ? 'border-red-500 focus:ring-red-500' : 'border-gray-300 focus:ring-purple-500']" />
+              <ErrorMessage name="current" class="text-red-500 text-xs mt-1" />
             </div>
             <div>
               <label class="block text-sm font-medium text-gray-700 mb-1">Nueva Contraseña</label>
-              <input type="password"
-                class="w-full px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-purple-500 focus:border-transparent">
+              <Field name="new" type="password"
+                :class="['w-full px-3 py-2 border rounded-lg focus:ring-2 focus:border-transparent transition-colors', errors.new ? 'border-red-500 focus:ring-red-500' : 'border-gray-300 focus:ring-purple-500']" />
+              <ErrorMessage name="new" class="text-red-500 text-xs mt-1" />
             </div>
             <div>
               <label class="block text-sm font-medium text-gray-700 mb-1">Confirmar Nueva Contraseña</label>
-              <input type="password"
-                class="w-full px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-purple-500 focus:border-transparent">
+              <Field name="confirm" type="password"
+                :class="['w-full px-3 py-2 border rounded-lg focus:ring-2 focus:border-transparent transition-colors', errors.confirm ? 'border-red-500 focus:ring-red-500' : 'border-gray-300 focus:ring-purple-500']" />
+              <ErrorMessage name="confirm" class="text-red-500 text-xs mt-1" />
             </div>
-            <button type="button"
-              class="px-4 py-2 bg-purple-600 text-white rounded-lg hover:bg-purple-700 transition-colors text-sm font-medium">
-              Actualizar Contraseña
+            <button type="submit" :disabled="isChangingPassword"
+              class="px-4 py-2 bg-purple-600 text-white rounded-lg hover:bg-purple-700 transition-colors text-sm font-medium disabled:opacity-50 disabled:cursor-not-allowed flex items-center gap-2">
+              <i v-if="isChangingPassword" class="pi pi-spin pi-spinner"></i>
+              {{ isChangingPassword ? 'Actualizando...' : 'Actualizar Contraseña' }}
             </button>
-          </form>
+          </Form>
         </div>
       </div>
 
@@ -153,15 +157,56 @@
 import { ref } from "vue";
 import { useAuthStore } from "../stores/auth";
 import ModalInventariador from "../components/ModalInventariador.vue";
+import { changePasswordService } from "../services/authService";
+import Swal from "sweetalert2";
+import { Form, Field, ErrorMessage } from "vee-validate";
+import * as yup from "yup";
 
 const auth = useAuthStore();
 const activeTab = ref('perfil');
 const openModalInvetoriador = ref(false);
 
+const isChangingPassword = ref(false);
+
+const schema = yup.object({
+  current: yup.string().required("La contraseña actual es requerida"),
+  new: yup.string().required("La nueva contraseña es requerida").min(6, "La contraseña debe tener al menos 6 caracteres"),
+  confirm: yup.string()
+    .required("Debes confirmar la contraseña")
+    .oneOf([yup.ref("new")], "Las contraseñas no coinciden"),
+});
+
 const addInventariador = (nuevoInventariador: any) => {
   console.log("Nuevo inventariador:", nuevoInventariador);
   openModalInvetoriador.value = false;
   // Aquí iría la lógica para guardar
+};
+
+const onSubmit = async (values: any, { resetForm }: any) => {
+  isChangingPassword.value = true;
+
+  try {
+    await changePasswordService(values.current, values.new);
+    
+    Swal.fire({
+      icon: "success",
+      title: "¡Éxito!",
+      text: "Contraseña actualizada correctamente",
+      timer: 2000,
+      showConfirmButton: false
+    });
+
+    resetForm();
+    
+  } catch (error: any) {
+    Swal.fire({
+      icon: "error",
+      title: "Error",
+      text: error.response?.data?.message || "Error al actualizar la contraseña",
+    });
+  } finally {
+    isChangingPassword.value = false;
+  }
 };
 
 const getRoleName = (rolId: number | undefined) => {

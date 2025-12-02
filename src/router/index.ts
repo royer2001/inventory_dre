@@ -63,7 +63,7 @@ const router = createRouter({
           component: AjustesView,
           meta: {
             requiresAuth: true,
-            roles: [1],
+            roles: [1, 2],
           },
         },
       ],
