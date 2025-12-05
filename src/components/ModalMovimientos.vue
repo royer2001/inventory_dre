@@ -2,8 +2,7 @@
   <Transition enter-active-class="transition-opacity duration-300 ease-out" enter-from-class="opacity-0"
     enter-to-class="opacity-100" leave-active-class="transition-opacity duration-200 ease-in"
     leave-from-class="opacity-100" leave-to-class="opacity-0">
-    <div v-if="isOpen"
-      class="fixed inset-0 z-50 flex items-center justify-center bg-black/30 backdrop-blur-md p-4"
+    <div v-if="isOpen" class="fixed inset-0 z-50 flex items-center justify-center bg-black/30 backdrop-blur-md p-4"
       @click.self="closeModal">
       <Transition enter-active-class="transition-all duration-300 ease-out" enter-from-class="opacity-0 scale-95"
         enter-to-class="opacity-100 scale-100" leave-active-class="transition-all duration-200 ease-in"
@@ -102,32 +101,33 @@
                           <span class="text-gray-600">Ubicación:</span>
                           <span class="font-medium text-gray-800 ml-2">{{
                             mov.ubicacion_actual
-                          }}</span>
+                            }}</span>
                         </p>
                         <p v-if="mov.responsable">
                           <span class="text-gray-600">Responsable:</span>
                           <span class="font-medium text-gray-800 ml-2">{{
                             mov.responsable
-                          }}</span>
+                            }}</span>
                         </p>
                         <p v-if="mov.modalidad_responsable">
                           <span class="text-gray-600">Modalidad:</span>
                           <span class="font-medium text-gray-800 ml-2">{{
                             mov.modalidad_responsable
-                            }}</span>
+                          }}</span>
                         </p>
-                        <p v-if="mov.estado_bien_actual">
+                        <p v-if="mov.estado_movimiento || mov.estado">
                           <span class="text-gray-600">Estado del Bien:</span>
-                          <span class="font-medium text-gray-800 ml-2">{{
-                            mov.estado_bien_actual
-                            }}</span>
+                          <span class="ml-2 px-2 py-0.5 rounded-full text-xs font-medium"
+                            :class="getEstadoClass(mov.estado_movimiento || mov.estado)">
+                            {{ mov.estado_movimiento || mov.estado }}
+                          </span>
                         </p>
 
                         <p v-if="mov.inventariador_nombre">
                           <span class="text-gray-600">Registrado por:</span>
                           <span class="font-medium text-gray-800 ml-2">{{
                             mov.inventariador_nombre
-                          }}</span>
+                            }}</span>
                         </p>
                         <p v-if="mov.observaciones" class="pt-2 text-gray-600">
                           <i class="pi pi-info-circle mr-1"></i>
@@ -276,7 +276,8 @@ interface Movimiento {
   inventariador_nombre?: string;
   documento_id?: number | null;
   observaciones?: string;
-  estado_bien_actual?: string;
+  estado?: string; // Estado del bien en el momento del movimiento
+  estado_movimiento?: string; // Alias del estado guardado
 }
 
 const props = defineProps<{
@@ -401,14 +402,12 @@ const submitMovimiento = handleSubmit(async (values) => {
     bien_id: props.bien.id,
     tipo: values.tipo,
     fecha: values.fecha,
-    ubicacion_origen: props.bien.ubicacion_nombre || "",
-    ubicacion_destino: values.ubicacion_destino,
-    responsable_anterior: props.bien.responsable_nombre || "",
-    responsable_nuevo: values.responsable_nuevo,
-    modalidad_responsable_anterior: "NO REGISTRADO", // Valor por defecto ya que no viene en props.bien
-    modalidad_responsable_nuevo: values.modalidad_responsable_nuevo,
+    ubicacion_actual: values.ubicacion_destino, // Nueva ubicación
+    responsable: values.responsable_nuevo, // Nuevo responsable
+    modalidad_responsable: values.modalidad_responsable_nuevo, // Régimen del nuevo responsable
     inventariador_id: auth.user?.id,
     observaciones: values.observaciones,
+    estado: props.bien.estado || "BUENO", // Estado actual del bien
   };
 
   try {
@@ -454,6 +453,8 @@ const getIconForMovement = (tipo: string) => {
       return "pi pi-trash text-red-500";
     case "cambio de estado":
       return "pi pi-refresh text-orange-500";
+    case "editado":
+      return "pi pi-pencil text-amber-500";
     default:
       return "pi pi-info-circle text-gray-500";
   }
@@ -467,5 +468,18 @@ const formatDate = (dateString: string) => {
     month: "long",
     year: "numeric",
   }).format(date);
+};
+
+// Función para obtener la clase CSS según el estado del bien
+const getEstadoClass = (estado: string | undefined) => {
+  if (!estado) return 'bg-gray-100 text-gray-800';
+
+  const estadoUpper = estado.toUpperCase();
+  const clases: Record<string, string> = {
+    'BUENO': 'bg-green-100 text-green-800',
+    'REGULAR': 'bg-yellow-100 text-yellow-800',
+    'MALO': 'bg-red-100 text-red-800'
+  };
+  return clases[estadoUpper] || 'bg-gray-100 text-gray-800';
 };
 </script>

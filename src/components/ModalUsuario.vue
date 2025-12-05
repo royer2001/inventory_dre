@@ -111,7 +111,7 @@
 </template>
 
 <script setup lang="ts">
-import { ref, reactive, watch, onMounted, computed } from 'vue';
+import { ref, reactive, watch, computed } from 'vue';
 import { userService } from '../services/userService';
 
 const props = defineProps<{
@@ -137,19 +137,27 @@ const form = reactive({
 
 const isEditing = computed(() => !!props.userToEdit);
 
-// Fetch roles on mount
-onMounted(async () => {
+// Flag para cargar roles solo una vez
+const rolesLoaded = ref(false);
+
+// Función para cargar roles
+const fetchRoles = async () => {
+    if (rolesLoaded.value) return; // No cargar si ya se cargaron
     try {
         const response: any = await userService.getRoles();
         roles.value = response.data || response;
+        rolesLoaded.value = true;
     } catch (e) {
         console.error('Error fetching roles:', e);
     }
-});
+};
 
 // Reset form when modal opens/closes or userToEdit changes
-watch(() => props.isOpen, (newVal) => {
+watch(() => props.isOpen, async (newVal) => {
     if (newVal) {
+        // Cargar roles solo cuando el modal se abre
+        await fetchRoles();
+
         resetForm();
         if (props.userToEdit) {
             Object.assign(form, {

@@ -216,11 +216,11 @@
               Mostrando
               <span class="font-medium">{{
                 (pagination.page - 1) * pagination.per_page + 1
-                }}</span>
+              }}</span>
               a
               <span class="font-medium">{{
                 Math.min(pagination.page * pagination.per_page, pagination.total)
-                }}</span>
+              }}</span>
               de
               <span class="font-medium">{{ pagination.total }}</span>
               resultados
@@ -288,23 +288,32 @@ interface Bien {
   id: number;
   codigo_patrimonio: string;
   codigo_interno: string;
+  codigo_completo?: string; // Código completo del bien
   categoria_nombre: string;
   detalle_bien: string;
   descripcion: string;
   marca: string;
   modelo: string;
   tipo_origen?: string;
+  tipo_registro?: string; // SIGA o SOBRANTE
   color?: string;
   dimension?: string;
   numero_serie?: string;
+  serie?: string; // Alias para numero_serie
   estado: string;
   estado_nombre: string;
   responsable_nombre: string;
   responsable_id: number | null;
   ubicacion_id: number | null;
   ubicacion_nombre: string;
-  serie?: string; // For export
+  tipo_modalidad?: string; // Régimen del responsable (CAP, CAS, OTROS)
+  observacion?: string;
   categoria?: string; // For export
+  // Datos del inventariador
+  inventariador_id?: number;
+  inventariador_nombre?: string;
+  created_at?: string; // Fecha de registro
+  updated_at?: string; // Fecha de última actualización
 }
 
 const estadoEstilos = {

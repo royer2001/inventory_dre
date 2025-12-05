@@ -124,7 +124,7 @@
                         <tr>
                             <th class="px-6 py-3">Bien</th>
                             <th class="px-6 py-3">Acción</th>
-                            <th class="px-6 py-3">Usuario</th>
+                            <th class="px-6 py-3">Responsable</th>
                             <th class="px-6 py-3">Fecha</th>
                             <th class="px-6 py-3">Estado</th>
                         </tr>

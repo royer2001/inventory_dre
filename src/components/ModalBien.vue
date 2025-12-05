@@ -3,8 +3,7 @@
   <Transition enter-active-class="transition-opacity duration-300 ease-out" enter-from-class="opacity-0"
     enter-to-class="opacity-100" leave-active-class="transition-opacity duration-200 ease-in"
     leave-from-class="opacity-100" leave-to-class="opacity-0">
-    <div v-if="isOpen"
-      class="fixed inset-0 z-50 flex items-center justify-center bg-black/30 backdrop-blur-md p-4"
+    <div v-if="isOpen" class="fixed inset-0 z-50 flex items-center justify-center bg-black/30 backdrop-blur-md p-4"
       @click.self="cerrarModal">
       <!-- Modal con animación -->
       <Transition enter-active-class="transition-all duration-300 ease-out" enter-from-class="opacity-0 scale-95"
@@ -213,10 +212,10 @@
                       <label class="block text-sm font-semibold text-gray-700 mb-2">
                         Categoría
                       </label>
-                      <select v-model="categoria_id" v-bind="categoria_idProps"
-                        class="w-full px-4 py-2.5 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-transparent transition-all duration-200 bg-white"
+                      <select v-model="categoria_id" v-bind="categoria_idProps" :disabled="isLoadingCategorias"
+                        class="w-full px-4 py-2.5 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-transparent transition-all duration-200 bg-white disabled:bg-gray-100 disabled:cursor-wait"
                         :class="{ 'border-red-500': errors.categoria_id }">
-                        <option value="">Seleccione...</option>
+                        <option value="">{{ isLoadingCategorias ? 'Cargando...' : 'Seleccione...' }}</option>
                         <option v-for="cat in categorias" :key="cat.id" :value="cat.id">
                           {{ cat.nombre }}
                         </option>
@@ -449,13 +448,14 @@
                     </p>
                   </div>
 
-                  <!-- Modalidad -->
+                  <!-- Modalidad del Responsable -->
                   <div>
                     <label class="block text-sm font-semibold text-gray-700 mb-2">
-                      Modalidad del funcionario
+                      Régimen del Responsable
                       <span class="text-red-500">*</span>
                     </label>
-                    <select v-model="modalidad" v-bind="modalidadProps" :disabled="isEditing"
+                    <select v-model="modalidad" v-bind="modalidadProps"
+                      :disabled="isEditing && !!props.bienToEdit?.tipo_modalidad"
                       class="w-full px-4 py-2.5 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-transparent transition-all duration-200 bg-white disabled:bg-gray-100 disabled:text-gray-500"
                       :class="{ 'border-red-500': errors.modalidad }">
                       <option value="">Seleccione...</option>
@@ -463,6 +463,11 @@
                         {{ moda.modalidad }}
                       </option>
                     </select>
+                    <p v-if="isEditing && !props.bienToEdit?.tipo_modalidad"
+                      class="text-yellow-600 text-xs mt-1 flex items-center gap-1">
+                      <i class="pi pi-info-circle text-xs"></i>
+                      El responsable no tiene régimen registrado. Puede establecerlo ahora.
+                    </p>
                     <p v-if="errors.modalidad" class="text-red-500 text-xs mt-1">
                       {{ errors.modalidad }}
                     </p>
@@ -588,8 +593,10 @@
 </template>
 
 <script setup lang="ts">
-import { computed, ref, watch } from "vue";
+import { computed, ref, watch, onMounted } from "vue";
 import { bienService } from "../services/bienService";
+import { movimientoService } from "../services/movimientoService";
+import { categoriaService, type Categoria } from "../services/categoriaService";
 import { useAuthStore } from "../stores/auth";
 import { useForm } from "vee-validate";
 import * as yup from "yup";
@@ -608,15 +615,31 @@ const props = defineProps({
 
 const emit = defineEmits(["close", "save"]);
 
-// Datos de ejemplo
-const categorias = [
-  { id: 1, nombre: "Monitores" },
-  { id: 2, nombre: "Computadoras" },
-  { id: 3, nombre: "Impresoras" },
-  { id: 4, nombre: "Proyectores" },
-  { id: 5, nombre: "Mobiliario" },
-  { id: 6, nombre: "Equipos de Red" },
-];
+// Datos dinámicos desde API
+const categorias = ref<Categoria[]>([]);
+const isLoadingCategorias = ref(false);
+
+// Función para cargar categorías desde el backend
+const fetchCategorias = async () => {
+  isLoadingCategorias.value = true;
+  try {
+    const response = await categoriaService.getAll();
+    if (response.success && response.data) {
+      categorias.value = response.data;
+    } else {
+      console.error("Error cargando categorías:", response.message);
+    }
+  } catch (error) {
+    console.error("Error cargando categorías:", error);
+  } finally {
+    isLoadingCategorias.value = false;
+  }
+};
+
+// Cargar categorías al montar el componente
+onMounted(() => {
+  fetchCategorias();
+});
 
 const estados = [
   { id: 1, nombre: "Bueno" },
@@ -837,6 +860,30 @@ const submitForm = handleSubmit(async (values) => {
     if (isEditing.value) {
       // Update
       response = await bienService.update(props.bienToEdit.id, payload);
+
+      // Si la actualización fue exitosa, registrar movimiento de tipo "Editado"
+      const res = response as any;
+      if (res.success) {
+        // Crear movimiento de tipo "Editado"
+        const movimientoData = {
+          bien_id: props.bienToEdit.id,
+          tipo: "Editado",
+          fecha: new Date().toISOString().split('T')[0],
+          ubicacion_actual: values.ubicacion, // Ubicación después de la edición
+          responsable: values.responsable, // Responsable después de la edición
+          modalidad_responsable: values.modalidad || "NO REGISTRADO",
+          estado: estadoNombre, // Estado del bien en el momento de la edición
+          inventariador_id: auth.user?.id,
+          observaciones: `Bien editado. Cambios realizados en la información del bien.`,
+        };
+
+        // Registrar el movimiento (no bloqueante, error silencioso)
+        try {
+          await movimientoService.create(movimientoData);
+        } catch (movError) {
+          console.error("Error registrando movimiento de edición:", movError);
+        }
+      }
     } else {
       // Create
       response = await bienService.create(payload);
